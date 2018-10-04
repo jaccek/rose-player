@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">RosePlayer</string>
+
+    <string name="bottom_nav.now_playing">Now Playing</string>
+    <string name="bottom_nav.playing_queue">Playing Queue</string>
+    <string name="bottom_nav.playlists">Playlists</string>
+
+    <string name="pause">Pause</string>
+    <string name="play">Play</string>
+</resources>
