@@ -13,6 +13,7 @@ interface PlayerController {
 
     val songChanges: Flowable<Song>
     val playerStateChanges: Flowable<State>
+    @Deprecated("should be in storage")
     val queueChanges: Flowable<List<Song>>
 
     fun connect()
