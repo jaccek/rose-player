@@ -1,25 +1,25 @@
 package com.github.jaccek.roseplayer.service
 
-import android.app.Notification
-import android.app.PendingIntent
 import android.app.Service
-import android.content.*
+import android.content.ContentUris
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.Bundle
 import android.provider.MediaStore
-import android.support.v4.app.NotificationCompat
-import android.support.v4.content.ContextCompat
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaBrowserServiceCompat
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
-import android.support.v4.media.session.MediaButtonReceiver
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import com.github.jaccek.roseplayer.MusicPlayer
-import com.github.jaccek.roseplayer.R
 import com.github.jaccek.roseplayer.dto.Song
+import com.github.jaccek.roseplayer.player.PlayerController
+import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
+import org.koin.android.ext.android.inject
 
 
 class MediaPlaybackService : MediaBrowserServiceCompat() {
@@ -32,9 +32,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     private lateinit var mediaSession: MediaSessionCompat
 
+    private val notificationCreator: NotificationCreator by inject()
+
     private val afChangeListener: AudioManager.OnAudioFocusChangeListener? = null
     //    private val myNoisyAudioStreamReceiver = BecomingNoisyReceiver()  // TODO
-    private lateinit var myPlayerNotification: Notification
     private lateinit var player: MusicPlayer
     private val intentFilter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
     private val songs = mutableListOf<Song>()
@@ -67,6 +68,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                         currentSong = it
                         player.play(it)
                         mediaSession.setMetadata(it.toMetadata())
+                        val notification = notificationCreator.createPlayerNotification(it, PlayerController.State.PLAYING)
+                        startForeground(NOTIFICATION_ID, notification)
                     }
                 mediaSession.setPlaybackState(
                     PlaybackStateCompat.Builder()
@@ -75,8 +78,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 )
                 // Register BECOME_NOISY BroadcastReceiver
 //                registerReceiver(myNoisyAudioStreamReceiver, intentFilter)    // TODO:
-                createNotification()
-                startForeground(NOTIFICATION_ID, myPlayerNotification)
             }
         }
 
@@ -90,6 +91,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             mediaSession.isActive = false
             player.pause()
             stopForeground(false)
+            currentSong?.let {
+                val notification = notificationCreator.createPlayerNotification(it, PlayerController.State.STOPPED)
+                startForeground(NOTIFICATION_ID, notification)
+            }
         }
 
         override fun onPause() {
@@ -104,7 +109,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             player.pause()
             // unregister BECOME_NOISY BroadcastReceiver
 //            unregisterReceiver(myNoisyAudioStreamReceiver)    // TODO
-            stopForeground(false)
+            currentSong?.let {
+                val notification = notificationCreator.createPlayerNotification(it, PlayerController.State.PAUSED)
+                startForeground(NOTIFICATION_ID, notification)
+            }
         }
     }
 
@@ -118,7 +126,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                     MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
         )
-        createNotification()
 
         val playbackStateBuilder = PlaybackStateCompat.Builder().setActions(
             PlaybackStateCompat.ACTION_PLAY or
@@ -207,75 +214,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             cur.close()
         }
         return songs
-    }
-
-
-
-    private fun createNotification() {
-        val controller = mediaSession.controller
-        val mediaMetadata: MediaMetadataCompat? = controller.metadata
-        val description: MediaDescriptionCompat? = mediaMetadata?.description
-
-        val builder = NotificationCompat.Builder(applicationContext)
-
-        val componentName = ComponentName(applicationContext, MediaPlaybackService::class.java)
-
-        builder
-            // Add the metadata for the currently playing track
-            .setContentTitle(description?.title)
-            .setContentText(description?.subtitle)
-            .setSubText(description?.description)
-            .setLargeIcon(description?.iconBitmap)
-
-            // Enable launching the player by clicking the notification
-            .setContentIntent(controller.sessionActivity)
-
-            // Stop the service when the notification is swiped away
-            .setDeleteIntent(
-                MediaButtonReceiver.buildMediaButtonPendingIntent(
-                    this,
-                    PlaybackStateCompat.ACTION_STOP
-                )
-            )
-
-            // Make the transport controls visible on the lockscreen
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-
-            // Add an app icon and set its accent color
-            // Be careful about the color
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
-
-            // Add a pause button
-            .addAction(
-                NotificationCompat.Action(
-                    R.drawable.pause, getString(R.string.pause),
-                    PendingIntent.getService(
-                        applicationContext,
-                        0,
-                        Intent("action").apply { component = componentName },
-                        0
-                    )
-                )
-            )
-
-            // Take advantage of MediaStyle features
-            .setStyle(
-                android.support.v4.media.app.NotificationCompat.MediaStyle()
-                    .setMediaSession(mediaSession.sessionToken)
-                    .setShowActionsInCompactView(0)
-
-                    // Add a cancel button
-                    .setShowCancelButton(true)
-                    .setCancelButtonIntent(
-                        MediaButtonReceiver.buildMediaButtonPendingIntent(
-                            this,
-                            PlaybackStateCompat.ACTION_STOP
-                        )
-                    )
-            )
-
-        myPlayerNotification = builder.build()
     }
 
     private fun Song.toMetadata(): MediaMetadataCompat {
