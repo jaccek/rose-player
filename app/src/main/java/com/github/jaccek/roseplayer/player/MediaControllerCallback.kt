@@ -1,10 +1,10 @@
 package com.github.jaccek.roseplayer.player
 
-import android.net.Uri
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.github.jaccek.roseplayer.dto.Song
+import com.github.jaccek.roseplayer.dto.toSong
 import io.reactivex.Flowable
 import io.reactivex.processors.BehaviorProcessor
 
@@ -41,16 +41,5 @@ class MediaControllerCallback: MediaControllerCompat.Callback() {
         metadata?.toSong()?.let {
             songChangesPublisher.onNext(it)
         }
-    }
-
-    private fun MediaMetadataCompat.toSong(): Song? {
-        if (description?.mediaId == null) {
-            return null
-        }
-        return Song(
-            id = description?.mediaId?.toLong() ?: -1,
-            title = description?.title?.toString() ?: "",
-            uri = description?.mediaUri ?: Uri.EMPTY
-        )
     }
 }

@@ -2,17 +2,12 @@ package com.github.jaccek.roseplayer.player
 
 import android.content.ComponentName
 import android.content.Context
-import android.net.Uri
 import android.support.v4.media.MediaBrowserCompat
-import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
-import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import com.github.jaccek.roseplayer.dto.Song
 import com.github.jaccek.roseplayer.service.MediaPlaybackService
 import com.github.jaccek.roseplayer.service.MediaPlaybackService.Companion.MEDIA_ROOT_ID
 import io.reactivex.Flowable
-import io.reactivex.processors.PublishProcessor
 
 class PlayerControllerImpl(
     private val context: Context
@@ -76,16 +71,5 @@ class PlayerControllerImpl(
         controllerCallback.onPlaybackStateChanged(pbState)
 
         mediaController.registerCallback(controllerCallback)
-    }
-
-    private fun MediaMetadataCompat.toSong(): Song? {
-        if (description?.mediaId == null) {
-            return null
-        }
-        return Song(
-            id = description?.mediaId?.toLong() ?: -1,
-            title = description?.title?.toString() ?: "",
-            uri = description?.mediaUri ?: Uri.EMPTY
-        )
     }
 }

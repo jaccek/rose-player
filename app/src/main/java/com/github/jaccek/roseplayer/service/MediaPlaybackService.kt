@@ -16,6 +16,8 @@ import android.text.TextUtils
 import android.util.Log
 import com.github.jaccek.roseplayer.MusicPlayer
 import com.github.jaccek.roseplayer.dto.Song
+import com.github.jaccek.roseplayer.dto.toMediaItem
+import com.github.jaccek.roseplayer.dto.toMetadata
 import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
 import com.github.jaccek.roseplayer.presentation.notification.PlayerNotification
@@ -191,29 +193,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                 songs.addAll(it)
             }
             .flatMapObservable { Observable.fromIterable(it) }
-            .map {
-                MediaBrowserCompat.MediaItem(
-                    MediaDescriptionCompat.Builder()
-                        .setTitle(it.title)
-                        .setMediaId(it.id.toString())
-                        .setMediaUri(it.uri)
-                        .build(),
-                    0
-                )
-            }
+            .map { it.toMediaItem() }
             .toList()
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
                 { result.sendResult(it) },
                 { Log.e("MediaPlaybackService", "songs repo error", it) }
             )
-    }
-
-    private fun Song.toMetadata(): MediaMetadataCompat {
-        return MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, this.id.toString())
-            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_URI, this.uri.toString())
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, this.title)
-            .build()
     }
 }

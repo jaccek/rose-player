@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.content.ContentUris
 import android.provider.MediaStore
 import com.github.jaccek.roseplayer.dto.Song
+import com.github.jaccek.roseplayer.dto.toSong
 import com.github.jaccek.roseplayer.repository.cursor.CursorSpecification
 import io.reactivex.Maybe
 
@@ -22,25 +23,8 @@ class AllSongsCursorSpec : CursorSpecification<Song> {
             cursor?.let { cur ->
                 if (cur.count > 0) {
                     while (cur.moveToNext()) {
-                        val title =
-                            cur.getString(cur.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME))
-                        val id = cur.getLong(cur.getColumnIndex(MediaStore.Audio.Media._ID))
-                        val songUri =
-                            ContentUris.withAppendedId(
-                                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                                id
-                            )
-                        // Add code to get more column here
-
-                        val song = Song(
-                            id = id,
-                            title = title,
-                            uri = songUri
-                        )
-
-                        songs.add(song)
+                        songs.add(cur.toSong())
                     }
-
                 }
             }
             cursor?.close()

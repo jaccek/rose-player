@@ -1,8 +1,8 @@
 package com.github.jaccek.roseplayer.player
 
-import android.net.Uri
 import android.support.v4.media.MediaBrowserCompat
 import com.github.jaccek.roseplayer.dto.Song
+import com.github.jaccek.roseplayer.dto.toSong
 import io.reactivex.Flowable
 import io.reactivex.processors.BehaviorProcessor
 
@@ -22,11 +22,4 @@ class MediaBrowserSubscriptionCallback : MediaBrowserCompat.SubscriptionCallback
         val songs = children.map { it.toSong() }
         queueChangesPublisher.onNext(songs)
     }
-
-    private fun MediaBrowserCompat.MediaItem.toSong() =
-        Song(
-            id = this.description.mediaId?.toLong() ?: -1,
-            title = this.description.title?.toString() ?: "",
-            uri = this.description.mediaUri ?: Uri.EMPTY
-        )
 }
