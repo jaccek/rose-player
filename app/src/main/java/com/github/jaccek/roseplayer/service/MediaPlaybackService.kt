@@ -1,13 +1,11 @@
 package com.github.jaccek.roseplayer.service
 
 import android.app.Service
-import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.Bundle
-import android.provider.MediaStore
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaBrowserServiceCompat
 import android.support.v4.media.MediaDescriptionCompat
@@ -15,10 +13,18 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
+import android.util.Log
 import com.github.jaccek.roseplayer.MusicPlayer
 import com.github.jaccek.roseplayer.dto.Song
 import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
+import com.github.jaccek.roseplayer.presentation.notification.PlayerNotification
+import com.github.jaccek.roseplayer.repository.Repository
+import com.github.jaccek.roseplayer.repository.song.AllSongsCursorSpec
+import io.reactivex.Maybe
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import org.koin.android.ext.android.inject
 
 
@@ -32,6 +38,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     private lateinit var mediaSession: MediaSessionCompat
 
+    private val songsRepo: Repository<Song> by inject()
     private val notificationCreator: NotificationCreator by inject()
 
     private val afChangeListener: AudioManager.OnAudioFocusChangeListener? = null
@@ -68,7 +75,10 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                         currentSong = it
                         player.play(it)
                         mediaSession.setMetadata(it.toMetadata())
-                        val notification = notificationCreator.createPlayerNotification(it, PlayerController.State.PLAYING)
+                        val notification = notificationCreator.createPlayerNotification(
+                            it,
+                            PlayerController.State.PLAYING
+                        )
                         startForeground(NOTIFICATION_ID, notification)
                     }
                 mediaSession.setPlaybackState(
@@ -92,7 +102,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             player.pause()
             stopForeground(false)
             currentSong?.let {
-                val notification = notificationCreator.createPlayerNotification(it, PlayerController.State.STOPPED)
+                val notification =
+                    notificationCreator.createPlayerNotification(it, PlayerController.State.STOPPED)
                 startForeground(NOTIFICATION_ID, notification)
             }
         }
@@ -110,7 +121,8 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             // unregister BECOME_NOISY BroadcastReceiver
 //            unregisterReceiver(myNoisyAudioStreamReceiver)    // TODO
             currentSong?.let {
-                val notification = notificationCreator.createPlayerNotification(it, PlayerController.State.PAUSED)
+                val notification =
+                    notificationCreator.createPlayerNotification(it, PlayerController.State.PAUSED)
                 startForeground(NOTIFICATION_ID, notification)
             }
         }
@@ -140,8 +152,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
-            if (it.action == "action") {
-                callback.onPause()
+            if (it.action == PlayerNotification.PLAY_PAUSE_ACTION) {
+                if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
+                    callback.onPause()
+                } else {
+                    callback.onPlay()  // TODO: this starts playing song from the beginning (not resuming it)
+                }
             }
         }
 
@@ -165,7 +181,15 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
             return
         }
 
-        val mediaItems = readDataExternal()
+        result.detach()
+        // TODO: create factory for specifications
+        val disposable = songsRepo.query(AllSongsCursorSpec())
+            .subscribeOn(Schedulers.io())
+            .doOnSuccess {
+                songs.clear()
+                songs.addAll(it)
+            }
+            .flatMapObservable { Observable.fromIterable(it) }
             .map {
                 MediaBrowserCompat.MediaItem(
                     MediaDescriptionCompat.Builder()
@@ -176,44 +200,12 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
                     0
                 )
             }
-            .toMutableList()
-
-        result.sendResult(mediaItems)
-    }
-
-    private fun readDataExternal(): List<Song> {
-        // TODO: request permission
-        val cr = applicationContext?.contentResolver
-
-        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0"
-        val sortOrder = MediaStore.Audio.Media.TITLE + " ASC"
-
-        val cursor = cr?.query(uri, null, selection, null, sortOrder)
-
-        cursor?.let { cur ->
-            if (cur.count > 0) {
-                while (cur.moveToNext()) {
-                    val title =
-                        cur.getString(cur.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME))
-                    val id = cur.getLong(cur.getColumnIndex(MediaStore.Audio.Media._ID))
-                    val uri =
-                        ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
-                    // Add code to get more column here
-
-                    val song = Song(
-                        id = id,
-                        title = title,
-                        uri = uri
-                    )
-
-                    songs.add(song)
-                }
-
-            }
-            cur.close()
-        }
-        return songs
+            .toList()
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                { result.sendResult(it) },
+                { Log.e("MediaPlaybackService", "songs repo error", it) }
+            )
     }
 
     private fun Song.toMetadata(): MediaMetadataCompat {

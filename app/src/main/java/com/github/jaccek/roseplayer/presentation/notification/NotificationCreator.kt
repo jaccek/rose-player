@@ -50,9 +50,8 @@ class NotificationCreator(
                     PendingIntent.getService(
                         applicationContext,
                         0,
-                        Intent("action").apply {
-                            component = componentName
-                        },   // TODO: action as constant
+                        Intent(PlayerNotification.PLAY_PAUSE_ACTION)
+                            .apply { component = componentName },
                         0
                     )
                 )
