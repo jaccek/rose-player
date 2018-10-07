@@ -12,6 +12,7 @@ import android.support.v4.media.session.MediaButtonReceiver
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.github.jaccek.roseplayer.R
+import com.github.jaccek.roseplayer.dto.PlayerState
 import com.github.jaccek.roseplayer.dto.Song
 import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.service.MediaPlaybackService
@@ -20,13 +21,13 @@ class NotificationCreator(
     private val applicationContext: Context,
     private val mediaSession: MediaSessionCompat
 ) {
-    fun createPlayerNotification(song: Song, state: PlayerController.State): Notification {
+    fun createPlayerNotification(song: Song, state: PlayerState): Notification {
         val controller = mediaSession.controller
         val componentName = ComponentName(applicationContext, MediaPlaybackService::class.java)
         val playPauseButtonDrawableId = when (state) {
-            PlayerController.State.PLAYING -> R.drawable.pause
-            PlayerController.State.PAUSED -> R.drawable.play
-            PlayerController.State.STOPPED -> R.drawable.play
+            PlayerState.PLAYING -> R.drawable.pause
+            PlayerState.PAUSED -> R.drawable.play
+            PlayerState.STOPPED -> R.drawable.play
         }
 
         return NotificationCompat.Builder(applicationContext)   // TODO: create channel!!!

@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import com.github.jaccek.roseplayer.Manifest
 import com.github.jaccek.roseplayer.databinding.FragmentSongsListBinding
+import com.github.jaccek.roseplayer.dto.PlayerState
 import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.presentation.playerwidget.PlayerWidget
 import org.koin.android.ext.android.inject
@@ -63,7 +64,7 @@ class PlayingQueueFragment
             .subscribe(
                 {
                     binding.playerWidget.buttonType = when (it) {
-                        PlayerController.State.PLAYING -> PlayerWidget.ButtonType.PAUSE
+                        PlayerState.PLAYING -> PlayerWidget.ButtonType.PAUSE
                         else -> PlayerWidget.ButtonType.PLAY
                     }
                 },
