@@ -1,4 +1,4 @@
-package com.github.jaccek.roseplayer.repository.song
+package com.github.jaccek.roseplayer.repository.song.cursor
 
 import android.content.Context
 import com.github.jaccek.roseplayer.dto.Song

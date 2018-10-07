@@ -6,7 +6,9 @@ import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.player.PlayerControllerImpl
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
 import com.github.jaccek.roseplayer.repository.Repository
-import com.github.jaccek.roseplayer.repository.song.SongsCursorRepo
+import com.github.jaccek.roseplayer.repository.song.SongsSpecificationFactory
+import com.github.jaccek.roseplayer.repository.song.cursor.SongsCursorRepo
+import com.github.jaccek.roseplayer.repository.song.cursor.SongsCursorSpecFactory
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module.module
 
@@ -18,5 +20,11 @@ val appModule = module {
 
     single { MediaSessionCompat(androidContext(), "RosePlayer MediaSession") }
 
-    single<Repository<Song>> { SongsCursorRepo(androidContext()) }
+    single<Repository<Song>> {
+        SongsCursorRepo(
+            androidContext()
+        )
+    }
+
+    single<SongsSpecificationFactory> { SongsCursorSpecFactory() }
 }

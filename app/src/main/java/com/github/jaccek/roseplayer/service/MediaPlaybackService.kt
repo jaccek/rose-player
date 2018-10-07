@@ -20,8 +20,8 @@ import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
 import com.github.jaccek.roseplayer.presentation.notification.PlayerNotification
 import com.github.jaccek.roseplayer.repository.Repository
-import com.github.jaccek.roseplayer.repository.song.AllSongsCursorSpec
-import io.reactivex.Maybe
+import com.github.jaccek.roseplayer.repository.song.SongsSpecificationFactory
+import com.github.jaccek.roseplayer.repository.song.cursor.AllSongsCursorSpec
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
@@ -32,13 +32,14 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
     companion object {
         const val MEDIA_ROOT_ID = "MEDIA_ROOT_ID"
-        private const val MEDIA_SESSION_TAG = "MEDIA_SESSION_TAG"
         private const val NOTIFICATION_ID = 2
     }
 
-    private lateinit var mediaSession: MediaSessionCompat
+    private val mediaSession: MediaSessionCompat by inject()
 
     private val songsRepo: Repository<Song> by inject()
+    private val songsSpecFactory: SongsSpecificationFactory by inject()
+
     private val notificationCreator: NotificationCreator by inject()
 
     private val afChangeListener: AudioManager.OnAudioFocusChangeListener? = null
@@ -133,7 +134,6 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
 
         player = MusicPlayer.getInstance(applicationContext)
 
-        mediaSession = MediaSessionCompat(applicationContext, MEDIA_SESSION_TAG)
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                     MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -182,8 +182,9 @@ class MediaPlaybackService : MediaBrowserServiceCompat() {
         }
 
         result.detach()
-        // TODO: create factory for specifications
-        val disposable = songsRepo.query(AllSongsCursorSpec())
+
+        val allSongsSpec = songsSpecFactory.createAllSongsSpecyfication()
+        val disposable = songsRepo.query(allSongsSpec)
             .subscribeOn(Schedulers.io())
             .doOnSuccess {
                 songs.clear()
