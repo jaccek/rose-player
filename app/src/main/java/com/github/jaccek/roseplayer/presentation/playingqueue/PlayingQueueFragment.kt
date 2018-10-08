@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.Fragment
 import android.support.v4.content.ContextCompat
-import android.support.v4.media.session.MediaControllerCompat
 import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,7 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import com.github.jaccek.roseplayer.Manifest
 import com.github.jaccek.roseplayer.databinding.FragmentSongsListBinding
-import com.github.jaccek.roseplayer.dto.PlayerState
+import com.github.jaccek.roseplayer.dto.PlayingState
 import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.presentation.playerwidget.PlayerWidget
 import org.koin.android.ext.android.inject
@@ -60,11 +59,11 @@ class PlayingQueueFragment
 
         // TODO: remember subscribtions and unsubscribe on onPause
         // TODO: retry subscribe
-        playerController.playerStateChanges
+        playerController.playingStateChanges
             .subscribe(
                 {
                     binding.playerWidget.buttonType = when (it) {
-                        PlayerState.PLAYING -> PlayerWidget.ButtonType.PAUSE
+                        PlayingState.PLAYING -> PlayerWidget.ButtonType.PAUSE
                         else -> PlayerWidget.ButtonType.PLAY
                     }
                 },

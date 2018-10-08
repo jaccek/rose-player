@@ -1,6 +1,6 @@
 package com.github.jaccek.roseplayer.dto
 
-enum class PlayerState {
+enum class PlayingState {
     PLAYING,
     PAUSED,
     STOPPED

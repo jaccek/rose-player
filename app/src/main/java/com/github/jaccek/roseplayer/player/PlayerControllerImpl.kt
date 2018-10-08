@@ -4,7 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
-import com.github.jaccek.roseplayer.dto.PlayerState
+import com.github.jaccek.roseplayer.dto.PlayingState
 import com.github.jaccek.roseplayer.dto.Song
 import com.github.jaccek.roseplayer.service.MediaPlaybackService
 import com.github.jaccek.roseplayer.service.MediaPlaybackService.Companion.MEDIA_ROOT_ID
@@ -29,8 +29,8 @@ class PlayerControllerImpl(
     override val songChanges: Flowable<Song>
         get() = controllerCallback.songChanges
 
-    override val playerStateChanges: Flowable<PlayerState>
-        get() = controllerCallback.playerStateChanges
+    override val playingStateChanges: Flowable<PlayingState>
+        get() = controllerCallback.playingStateChanges
 
     override val queueChanges: Flowable<List<Song>>
         get() = subscriptionCallback.queueChanges

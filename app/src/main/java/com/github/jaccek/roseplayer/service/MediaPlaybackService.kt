@@ -10,7 +10,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import android.util.Log
 import com.github.jaccek.roseplayer.dto.*
-import com.github.jaccek.roseplayer.player.PlayerController
+import com.github.jaccek.roseplayer.player.MusicPlayer
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
 import com.github.jaccek.roseplayer.presentation.notification.PlayerNotification
 import com.github.jaccek.roseplayer.repository.Repository
@@ -21,8 +21,8 @@ import io.reactivex.schedulers.Schedulers
 import org.koin.android.ext.android.inject
 
 
-class MediaPlaybackService : MediaBrowserServiceCompat(),
-    MusicStateController.PlayerStateChangeListener {
+class MediaPlaybackService
+    : MediaBrowserServiceCompat() {
 
     companion object {
         const val MEDIA_ROOT_ID = "MEDIA_ROOT_ID"
@@ -35,6 +35,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat(),
     private val songsSpecFactory: SongsSpecificationFactory by inject()
 
     private val notificationCreator: NotificationCreator by inject()
+    private val player: MusicPlayer by inject() // TODO: ugly - injecting only for MusicStateController constructor
 
     private lateinit var musicController: MusicStateController
 
@@ -45,7 +46,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat(),
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
         )
 
-        musicController = MusicStateController(applicationContext, this)
+        musicController = MusicStateController(player)  // TODO: by inject?
         mediaSession.setCallback(musicController)
 
         val playbackStateBuilder = PlaybackStateCompat.Builder().setActions(
@@ -54,19 +55,28 @@ class MediaPlaybackService : MediaBrowserServiceCompat(),
         mediaSession.setPlaybackState(playbackStateBuilder.build())
 
         sessionToken = mediaSession.sessionToken
+
+        // TODO: save disposable
+        musicController.audioChanges
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                { onAudioChange(it.song, it.state) },
+                { Log.e("MediaPlayerService", "error", it) }
+            )
     }
 
-    override fun onPlayerStateChanged(song: Song, state: PlayerState) {
+    private fun onAudioChange(song: Song, state: PlayingState) {
         updateMediaSession(state, song)
         updateNotification(song, state)
 
-        if (state == PlayerState.STOPPED) {
+        if (state == PlayingState.STOPPED) {
             stopService()
         }
     }
 
-    private fun updateMediaSession(state: PlayerState, song: Song) {
-        mediaSession.isActive = state == PlayerState.PLAYING || state == PlayerState.PAUSED
+    private fun updateMediaSession(state: PlayingState, song: Song) {
+        mediaSession.isActive = state == PlayingState.PLAYING || state == PlayingState.PAUSED
         mediaSession.setMetadata(song.toMetadata())
         mediaSession.setPlaybackState(
             PlaybackStateCompat.Builder()
@@ -75,7 +85,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat(),
         )
     }
 
-    private fun updateNotification(song: Song, state: PlayerState) {
+    private fun updateNotification(song: Song, state: PlayingState) {
         val notification = notificationCreator.createPlayerNotification(song, state)
         startForeground(NOTIFICATION_ID, notification)
     }
@@ -118,6 +128,7 @@ class MediaPlaybackService : MediaBrowserServiceCompat(),
         result.detach()
 
         val allSongsSpec = songsSpecFactory.createAllSongsSpecyfication()
+        // TODO: release disposable in onDestroy
         val disposable = songsRepo.query(allSongsSpec)
             .subscribeOn(Schedulers.io())
             .doOnSuccess { musicController.updateSongs(it) }

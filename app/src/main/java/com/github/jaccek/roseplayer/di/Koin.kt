@@ -1,7 +1,10 @@
 package com.github.jaccek.roseplayer.di
 
 import android.support.v4.media.session.MediaSessionCompat
+import com.github.jaccek.roseplayer.MusicPlayerImpl
 import com.github.jaccek.roseplayer.dto.Song
+import com.github.jaccek.roseplayer.player.AudioFocusMusicPlayer
+import com.github.jaccek.roseplayer.player.MusicPlayer
 import com.github.jaccek.roseplayer.player.PlayerController
 import com.github.jaccek.roseplayer.player.PlayerControllerImpl
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
@@ -27,4 +30,9 @@ val appModule = module {
     }
 
     single<SongsSpecificationFactory> { SongsCursorSpecFactory() }
+
+    single<MusicPlayer> {
+        val internalPlayer = MusicPlayerImpl(androidContext())
+        AudioFocusMusicPlayer(androidContext(), internalPlayer)
+    }
 }
