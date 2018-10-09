@@ -24,8 +24,22 @@ class MusicPlayerImpl(
         get() = audioChangesPublisher
 
     override fun play(song: Song) {
-        // TODO: resume if current song is same as song and it's not finished
-        stop()  // TODO: internal stop to avoid sending stop audioState
+        if (currentSong == song && player?.isPaused == true) {
+            resume()
+        } else {
+            playNewSong(song)
+        }
+    }
+
+    private fun resume() {
+        player?.start()
+        currentSong?.let {
+            audioChangesPublisher.onNext(AudioState(it, PlayingState.PLAYING))
+        }
+    }
+
+    private fun playNewSong(song: Song) {
+        releasePlayer()
         currentSong = song
 
         contextRef.get()?.let { context ->
@@ -37,7 +51,7 @@ class MusicPlayerImpl(
             audioChangesPublisher.onNext(AudioState(song, PlayingState.PLAYING))
 
             player?.setOnCompletionListener {
-                // TODO: temporary
+                // TODO: temporary - should go to next song
                 audioChangesPublisher.onNext(AudioState(song, PlayingState.STOPPED))
             }
         }
@@ -52,14 +66,21 @@ class MusicPlayerImpl(
     }
 
     override fun stop() {
-        player?.stop()
-        player?.release()
+        releasePlayer()
 
         currentSong?.let {
             audioChangesPublisher.onNext(AudioState(it, PlayingState.STOPPED))
         }
+    }
+
+    private fun releasePlayer() {
+        player?.stop()
+        player?.release()
 
         player = null
         currentSong = null
     }
+
+    private val MediaPlayer.isPaused
+        get() = !isPlaying && currentPosition < duration
 }

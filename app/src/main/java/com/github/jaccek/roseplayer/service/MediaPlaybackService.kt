@@ -35,9 +35,8 @@ class MediaPlaybackService
     private val songsSpecFactory: SongsSpecificationFactory by inject()
 
     private val notificationCreator: NotificationCreator by inject()
-    private val player: MusicPlayer by inject() // TODO: ugly - injecting only for MusicStateController constructor
 
-    private lateinit var musicController: MusicStateController
+    private val musicController: MusicStateController by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -45,8 +44,6 @@ class MediaPlaybackService
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
         )
-
-        musicController = MusicStateController(player)  // TODO: by inject?
         mediaSession.setCallback(musicController)
 
         val playbackStateBuilder = PlaybackStateCompat.Builder().setActions(

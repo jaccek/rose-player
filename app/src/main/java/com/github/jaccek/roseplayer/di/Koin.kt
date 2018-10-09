@@ -12,6 +12,7 @@ import com.github.jaccek.roseplayer.repository.Repository
 import com.github.jaccek.roseplayer.repository.song.SongsSpecificationFactory
 import com.github.jaccek.roseplayer.repository.song.cursor.SongsCursorRepo
 import com.github.jaccek.roseplayer.repository.song.cursor.SongsCursorSpecFactory
+import com.github.jaccek.roseplayer.service.MusicStateController
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module.module
 
@@ -35,4 +36,6 @@ val appModule = module {
         val internalPlayer = MusicPlayerImpl(androidContext())
         AudioFocusMusicPlayer(androidContext(), internalPlayer)
     }
+
+    single { MusicStateController(get()) }
 }
