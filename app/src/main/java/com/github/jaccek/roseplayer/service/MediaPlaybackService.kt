@@ -10,16 +10,15 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import android.util.Log
 import com.github.jaccek.roseplayer.dto.*
-import com.github.jaccek.roseplayer.player.MusicPlayer
 import com.github.jaccek.roseplayer.presentation.notification.NotificationCreator
 import com.github.jaccek.roseplayer.presentation.notification.PlayerNotification
 import com.github.jaccek.roseplayer.repository.Repository
 import com.github.jaccek.roseplayer.repository.song.SongsSpecificationFactory
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import org.koin.android.ext.android.inject
-
 
 class MediaPlaybackService
     : MediaBrowserServiceCompat() {
@@ -37,6 +36,7 @@ class MediaPlaybackService
     private val notificationCreator: NotificationCreator by inject()
 
     private val musicController: MusicStateController by inject()
+    private val compositeDisposable = CompositeDisposable()
 
     override fun onCreate() {
         super.onCreate()
@@ -53,14 +53,19 @@ class MediaPlaybackService
 
         sessionToken = mediaSession.sessionToken
 
-        // TODO: save disposable
-        musicController.audioChanges
+        val audioChangesDisposable = musicController.audioChanges
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
                 { onAudioChange(it.song, it.state) },
                 { Log.e("MediaPlayerService", "error", it) }
             )
+        compositeDisposable.add(audioChangesDisposable);
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        compositeDisposable.dispose()
     }
 
     private fun onAudioChange(song: Song, state: PlayingState) {
@@ -98,7 +103,7 @@ class MediaPlaybackService
                 if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
                     musicController.onPause()
                 } else {
-                    musicController.onPlay()  // TODO: this starts playing song from the beginning (not resuming it)
+                    musicController.onPlay()
                 }
             }
         }
@@ -126,7 +131,7 @@ class MediaPlaybackService
 
         val allSongsSpec = songsSpecFactory.createAllSongsSpecyfication()
         // TODO: release disposable in onDestroy
-        val disposable = songsRepo.query(allSongsSpec)
+        val songsDisposable = songsRepo.query(allSongsSpec)
             .subscribeOn(Schedulers.io())
             .doOnSuccess { musicController.updateSongs(it) }
             .flatMapObservable { Observable.fromIterable(it) }
@@ -137,5 +142,6 @@ class MediaPlaybackService
                 { result.sendResult(it) },
                 { Log.e("MediaPlaybackService", "songs repo error", it) }
             )
+        compositeDisposable.add(songsDisposable)
     }
 }
